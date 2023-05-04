@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Heartbeat Example</title>
+</head>
+<body>
+<h1>WebSocket Heartbeat Example</h1>
+<div id="messages"></div>
+
+<script>
+        const socket = new WebSocket("ws://localhost:8080/ws");
+
+        socket.onopen = () => {
+          console.log("WebSocket connection established.");
+        };
+
+        socket.onmessage = (event) => {
+          if(event.data == "ping"){
+            console.log("Received message from server: " + event.data);
+            sendMessage("Hello server!");
+            }
+        };
+
+        socket.onclose = () => {
+          console.log("WebSocket connection closed.");
+        };
+
+        socket.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        function sendMessage(message) {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(message);
+          } else {
+            console.error("WebSocket connection is not open.");
+          }
+        }
+
+    </script>
+</body>
+</html>
