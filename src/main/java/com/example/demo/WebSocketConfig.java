@@ -1,62 +1,52 @@
 package com.example.demo;
-import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.*;
+import org.springframework.web.socket.*;import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
+    private List<WebSocketSession> sessions = new ArrayList<>();
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new WebSocketHandler(), "/ws").setAllowedOrigins("*");
+        registry.addHandler(new MyWebSocketHandler(), "/ws").setAllowedOrigins("*");
     }
 
-    private static class WebSocketHandler extends TextWebSocketHandler {
-
-        private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-        private ScheduledFuture<?> pingTask;
-
+    private class MyWebSocketHandler extends TextWebSocketHandler implements WebSocketHandler {
 
         @Override
-        public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-            pingTask = executor.scheduleAtFixedRate(() -> {
-                if (session.isOpen()) {
-                    try {
-                        System.out.println("Session status:"+session.isOpen());
-                        session.sendMessage(new TextMessage("ping"));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    pingTask.cancel(true);
-                    System.out.println("Session status:"+session.isOpen());
-                    System.out.println("Stop Pinging");
-                }
-            }, 5, 30, TimeUnit.SECONDS);
+        public void afterConnectionEstablished(WebSocketSession session) {
+            sessions.add(session);
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+            LocalDateTime now = LocalDateTime.now();
+            System.out.println(dtf.format(now)+" Session added Successfully "+session.getId());
         }
 
         @Override
-        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-            System.out.println("Connection Closed");
-            pingTask.cancel(true);
+        public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+            sessions.remove(session);
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+            LocalDateTime now = LocalDateTime.now();
+            System.out.println(dtf.format(now)+" Session removed Successfully "+session.getId());
         }
 
         @Override
-        public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-            System.out.println("Received message from client: " + message.getPayload());
-//            session.sendMessage(new TextMessage("Received message: " + message.getPayload()));
+        protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+            // Handle incoming text message
+            System.out.println("Message Received : "+message.toString());
         }
     }
 }
